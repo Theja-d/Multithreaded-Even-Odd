@@ -1,0 +1,52 @@
+%%writefile even_odd.cpp
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+std::mutex mtx;
+std::condition_variable cv;
+bool isEvenTurn = true;
+
+void printEven() {
+    for (int i = 0; i <= 10; i += 2) {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [] { return isEvenTurn; });
+
+        std::cout << i << " ";
+        isEvenTurn = false;
+        cv.notify_one();
+    }
+}
+
+void printOdd() {
+    for (int i = 1; i < 10; i += 2) {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [] { return !isEvenTurn; });
+
+        std::cout << i << " ";
+        isEvenTurn = true;
+        cv.notify_one();
+    }
+}
+
+int main() {
+    std::thread evenThread(printEven);
+    std::thread oddThread(printOdd);
+
+    evenThread.join();
+    oddThread.join();
+
+    std::cout << std::endl;
+    return 0;
+}
+
+
+
+
+
+
+
+
+!g++ even_odd.cpp -o even_odd -pthread
+!./even_odd
